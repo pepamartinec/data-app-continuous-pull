@@ -35,7 +35,9 @@ The app reads its configuration from `/data/config.json`:
     "watchedRepo": {
       "url": "https://github.com/org/my-python-js-app.git",
       "branch": "main",
-      "#privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\n..."
+      "#privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\n...",
+      "username": "git",
+      "#password": "ghp_xxxxxxxxxxxx"
     }
   }
 }
@@ -46,6 +48,8 @@ The app reads its configuration from `/data/config.json`:
 | `url` | yes | Git clone URL (HTTPS or SSH) |
 | `branch` | no | Branch to clone and track. Defaults to the repo's default branch. |
 | `#privateKey` | no | SSH private key for accessing private repositories. The `#` prefix means it is encrypted at rest by Keboola. |
+| `username` | no | Username for HTTPS auth. Used together with `#password`. |
+| `#password` | no | Password or personal access token for HTTPS auth. |
 
 ## Project Structure
 
