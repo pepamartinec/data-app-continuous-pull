@@ -1,14 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-WATCHED_DIR=/app/watched
-
-echo "Starting continuous pull loop for $WATCHED_DIR..."
+echo "Starting continuous pull loop..."
 
 while true; do
     sleep 1
 
-    cd "$WATCHED_DIR"
+    cd /app
 
     # Capture current HEAD
     OLD_HEAD=$(git rev-parse HEAD)
@@ -31,8 +29,14 @@ while true; do
         echo "Changed files:"
         git diff --name-only "$OLD_HEAD" "$NEW_HEAD"
 
-        # Re-run the watched app's setup to keep everything up-to-date
-        bash /app/scripts/rebuild.sh || echo "Warning: rebuild failed"
+        # Update saved watched app's supervisord config
+        cp /app/keboola-config/supervisord/services/*.conf /tmp/continuous-pull/watched-services/
+
+        # Re-run the watched app's setup
+        echo "Running watched app setup..."
+        if [ -f /app/keboola-config/setup.sh ]; then
+            bash /app/keboola-config/setup.sh || echo "Warning: watched app setup failed"
+        fi
 
         # Restart the app process
         echo "Restarting app..."

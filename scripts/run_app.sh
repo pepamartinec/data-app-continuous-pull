@@ -1,12 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
-WATCHED_DIR=/app/watched
-
 # Parse the watched app's supervisord config for the command
-CMD=$(python3 /app/scripts/parse_command.py "$WATCHED_DIR")
+CMD=$(python3 /tmp/continuous-pull/scripts/parse_command.py /tmp/continuous-pull/watched-services)
 
 echo "Starting watched app: $CMD"
-cd "$WATCHED_DIR"
+cd /app
 # shellcheck disable=SC2086
 exec $CMD

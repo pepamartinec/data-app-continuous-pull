@@ -17,8 +17,8 @@ Built for developing and debugging the continuous deployment flow.
                                        +--------+
 ```
 
-1. **Setup** -- reads `/data/config.json`, sets up SSH key (if provided), clones the watched repo
-2. **Build** -- runs the watched repo's own `keboola-config/setup.sh`
+1. **Setup** -- reads `/data/config.json`, sets up auth, moves our scripts to `/tmp/continuous-pull/`, clones the watched repo directly into `/app` so all its hardcoded paths work naturally
+2. **Build** -- runs the watched repo's own `keboola-config/setup.sh`, then restores our nginx/supervisord configs
 3. **Run** -- starts two supervised processes:
    - **app** -- the watched repo's backend (command auto-discovered from its supervisord config)
    - **pull-loop** -- fetches and hard-resets to the remote branch every second; on changes, re-runs the watched repo's setup and restarts the app
@@ -55,14 +55,14 @@ The app reads its configuration from `/data/config.json`:
 
 ```
 keboola-config/
-  setup.sh                          # Entrypoint: read config, clone, build
+  setup.sh                          # Entrypoint: read config, clone into /app, build
   nginx/sites/default.conf          # Reverse proxy: static files + /api/ -> :8050
   supervisord/services/app.conf     # Process manager: app + pull-loop
-scripts/
+scripts/                            # Moved to /tmp/continuous-pull/scripts/ at runtime
   run_app.sh                        # Discover and exec the watched app's command
   pull_loop.sh                      # Continuous fetch/reset loop
-  rebuild.sh                        # Delegate to the watched repo's setup.sh
   parse_command.py                  # Extract command from supervisord .conf
+fallback.html                       # "App is starting" page for health checks
 ```
 
 ## Assumptions

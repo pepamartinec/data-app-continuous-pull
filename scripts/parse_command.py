@@ -19,19 +19,18 @@ def parse_app_command(config_path):
 
 
 if __name__ == "__main__":
-    watched_dir = sys.argv[1] if len(sys.argv) > 1 else "/app/watched"
-    config_dir = os.path.join(watched_dir, "keboola-config", "supervisord", "services")
+    services_dir = sys.argv[1] if len(sys.argv) > 1 else "/tmp/continuous-pull/watched-services"
 
-    if not os.path.isdir(config_dir):
-        print(f"ERROR: Config directory not found: {config_dir}", file=sys.stderr)
+    if not os.path.isdir(services_dir):
+        print(f"ERROR: Services directory not found: {services_dir}", file=sys.stderr)
         sys.exit(1)
 
-    for f in sorted(os.listdir(config_dir)):
+    for f in sorted(os.listdir(services_dir)):
         if f.endswith(".conf"):
-            cmd = parse_app_command(os.path.join(config_dir, f))
+            cmd = parse_app_command(os.path.join(services_dir, f))
             if cmd:
                 print(cmd)
                 sys.exit(0)
 
-    print("ERROR: No app command found in watched repo's supervisord config", file=sys.stderr)
+    print("ERROR: No app command found in watched app's supervisord config", file=sys.stderr)
     sys.exit(1)

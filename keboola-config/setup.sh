@@ -49,7 +49,6 @@ if [ -n "$PRIVATE_KEY" ]; then
     git config --global core.sshCommand "ssh -o StrictHostKeyChecking=no"
 elif [ -n "$PASSWORD" ]; then
     echo "Setting up username/password auth..."
-    # Embed credentials into the clone URL (https://user:pass@host/...)
     REPO_URL=$(python3 -c "
 from urllib.parse import urlparse, urlunparse, quote
 import sys
@@ -60,16 +59,37 @@ print(urlunparse(u._replace(netloc=f'{user}:{pwd}@{u.hostname}' + (f':{u.port}' 
 " "$REPO_URL" "$USERNAME" "$PASSWORD")
 fi
 
-# Clone the watched repo
-echo "Cloning watched repo..."
+# Move our scripts and configs to a safe location outside /app
+echo "Saving continuous-pull scripts to /tmp/continuous-pull..."
+mkdir -p /tmp/continuous-pull
+cp -a /app/scripts /tmp/continuous-pull/scripts
+cp -a /app/keboola-config /tmp/continuous-pull/keboola-config
+cp -a /app/fallback.html /tmp/continuous-pull/fallback.html
+
+# Clear /app and clone the watched repo directly into it
+# so that the watched app's setup.sh /app paths work naturally
+echo "Cloning watched repo into /app..."
+find /app -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
 if [ -n "$BRANCH" ]; then
-    git clone --branch "$BRANCH" "$REPO_URL" /app/watched
+    git clone --branch "$BRANCH" "$REPO_URL" /app
 else
-    git clone "$REPO_URL" /app/watched
+    git clone "$REPO_URL" /app
 fi
 
-# Build the watched app
-echo "Building watched app..."
-bash /app/scripts/rebuild.sh full
+# Save watched app's supervisord config for command discovery
+mkdir -p /tmp/continuous-pull/watched-services
+cp /app/keboola-config/supervisord/services/*.conf /tmp/continuous-pull/watched-services/
+
+# Run watched app's setup — all /app paths work naturally
+echo "Running watched app setup..."
+if [ -f /app/keboola-config/setup.sh ]; then
+    bash /app/keboola-config/setup.sh
+fi
+
+# Restore our keboola-config (platform reads these AFTER setup.sh finishes)
+echo "Restoring continuous-pull configs..."
+cp -af /tmp/continuous-pull/keboola-config/nginx/* /app/keboola-config/nginx/
+cp -af /tmp/continuous-pull/keboola-config/supervisord/* /app/keboola-config/supervisord/
 
 echo "=== Setup complete ==="
