@@ -7,19 +7,19 @@ echo "=== Continuous Pull Data App Setup ==="
 REPO_URL=$(python3 -c "
 import json
 c = json.load(open('/data/config.json'))
-print(c['parameters']['dataApp']['watchedRepo']['url'])
+print(c['dataApp']['watchedRepo']['url'])
 ")
 
 BRANCH=$(python3 -c "
 import json
 c = json.load(open('/data/config.json'))
-print(c['parameters']['dataApp']['watchedRepo'].get('branch', ''))
+print(c['dataApp']['watchedRepo'].get('branch', ''))
 " 2>/dev/null || true)
 
 PRIVATE_KEY=$(python3 -c "
 import json
 c = json.load(open('/data/config.json'))
-print(c['parameters']['dataApp']['watchedRepo'].get('#privateKey', ''))
+print(c['dataApp']['watchedRepo'].get('#privateKey', ''))
 " 2>/dev/null || true)
 
 echo "Watched repo: $REPO_URL"

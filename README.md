@@ -31,13 +31,11 @@ The app reads its configuration from `/data/config.json`:
 
 ```json
 {
-  "parameters": {
-    "dataApp": {
-      "watchedRepo": {
-        "url": "https://github.com/org/my-python-js-app.git",
-        "branch": "main",
-        "#privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\n..."
-      }
+  "dataApp": {
+    "watchedRepo": {
+      "url": "https://github.com/org/my-python-js-app.git",
+      "branch": "main",
+      "#privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\n..."
     }
   }
 }
