@@ -1,11 +1,18 @@
 #!/bin/bash
 set -euo pipefail
 
-POLL_INTERVAL="${PULL_LOOP_INTERVAL:-10}"
+# shellcheck disable=SC1091
+[ -f /tmp/continuous-pull/config.env ] && . /tmp/continuous-pull/config.env
 
-echo "Starting continuous pull loop (interval: ${POLL_INTERVAL}s)..."
+if [ -z "${PULL_PERIOD:-}" ]; then
+    echo "Automatic pull disabled (pullPeriod not configured)"
+    # Stay alive so supervisord doesn't keep respawning us
+    exec sleep infinity
+fi
+
+echo "Starting continuous pull loop (interval: ${PULL_PERIOD}s)..."
 
 while true; do
-    sleep "$POLL_INTERVAL"
+    sleep "$PULL_PERIOD"
     bash /tmp/continuous-pull/scripts/pull_once.sh || true
 done

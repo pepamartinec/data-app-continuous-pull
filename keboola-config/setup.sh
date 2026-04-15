@@ -34,6 +34,13 @@ c = json.load(open('/data/config.json'))
 print(c['dataApp']['watchedRepo'].get('#password', ''))
 " 2>/dev/null || true)
 
+PULL_PERIOD=$(python3 -c "
+import json
+c = json.load(open('/data/config.json'))
+v = c['dataApp']['watchedRepo'].get('pullPeriod')
+print('' if v is None else int(v))
+" 2>/dev/null || true)
+
 echo "Watched repo: $REPO_URL"
 if [ -n "$BRANCH" ]; then
     echo "Branch: $BRANCH"
@@ -65,6 +72,11 @@ mkdir -p /tmp/continuous-pull
 cp -a /app/scripts /tmp/continuous-pull/scripts
 cp -a /app/keboola-config /tmp/continuous-pull/keboola-config
 cp -a /app/fallback.html /tmp/continuous-pull/fallback.html
+
+# Persist runtime config for pull_loop.sh
+cat > /tmp/continuous-pull/config.env <<EOF
+PULL_PERIOD=${PULL_PERIOD}
+EOF
 
 # Clear /app and clone the watched repo directly into it
 # so that the watched app's setup.sh /app paths work naturally
