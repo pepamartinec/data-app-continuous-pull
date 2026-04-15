@@ -93,11 +93,7 @@ fi
 mkdir -p /tmp/continuous-pull/watched-services
 cp /app/keboola-config/supervisord/services/*.conf /tmp/continuous-pull/watched-services/
 
-# Run watched app's setup — all /app paths work naturally
-echo "Running watched app setup..."
-if [ -f /app/keboola-config/setup.sh ]; then
-    bash /app/keboola-config/setup.sh
-fi
+# Watched app's setup.sh is run by the first pull_once, not here.
 
 # Restore our keboola-config (platform reads these AFTER setup.sh finishes)
 echo "Restoring continuous-pull configs..."
