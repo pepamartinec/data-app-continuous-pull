@@ -1,5 +1,9 @@
 # Continuous Pull Data App
 
+> **⚠️ DEVELOPMENT / DEBUGGING ONLY -- DO NOT USE IN PRODUCTION.**
+>
+> This app exists purely to accelerate the inner loop while developing and debugging python-js data apps. It auto-pulls arbitrary code from a remote branch, executes it with no sandboxing, and exposes an unauthenticated HTTP endpoint that triggers a pull on demand. There is no review step, no pinning, and no safety net of any kind. **Use at your own risk.**
+
 A Keboola [python-js](https://github.com/keboola/data-app-python-js) data app that acts as a live-reloading wrapper around another python-js app repository. It clones a watched repo, runs it, and can fetch-and-restart on new commits -- either on a configurable schedule or on demand via a small HTTP API.
 
 Built for developing and debugging the continuous deployment flow.
