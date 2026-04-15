@@ -53,6 +53,7 @@ fi
 
 if [ "$CHANGED" = "1" ]; then
     echo "Restarting app..."
-    supervisorctl restart app || echo "Warning: supervisorctl restart failed"
+    supervisorctl -s unix:///tmp/supervisor.sock restart app \
+        || echo "Warning: supervisorctl restart failed"
     echo "=== Update complete ==="
 fi

@@ -22,6 +22,7 @@ bash /app/keboola-config/setup.sh
 cp /app/keboola-config/supervisord/services/*.conf /tmp/continuous-pull/watched-services/
 
 echo "Restarting app..."
-supervisorctl restart app || echo "Warning: supervisorctl restart failed"
+supervisorctl -s unix:///tmp/supervisor.sock restart app \
+    || echo "Warning: supervisorctl restart failed"
 
 echo "=== Re-setup complete ==="
