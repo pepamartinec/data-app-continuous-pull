@@ -38,12 +38,6 @@ git clean -fdq
 # Update saved watched app's supervisord config
 cp /app/keboola-config/supervisord/services/*.conf /tmp/continuous-pull/watched-services/
 
-# Re-run the watched app's setup
-echo "Running watched app setup..."
-if [ -f /app/keboola-config/setup.sh ]; then
-    bash /app/keboola-config/setup.sh || echo "Warning: watched app setup failed"
-fi
-
 # Restart the app process
 echo "Restarting app..."
 supervisorctl restart app || echo "Warning: supervisorctl restart failed"

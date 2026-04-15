@@ -1,27 +1,36 @@
 #!/usr/bin/env python3
-"""Tiny HTTP server: POST /_api/pull triggers an immediate git pull."""
+"""Tiny HTTP server exposing pull/re-setup triggers for the continuous pull app.
+
+Endpoints:
+  POST /_api/pull      - fetch + reset + restart app
+  POST /_api/re-setup  - re-run watched app's setup.sh + restart app
+"""
 import subprocess
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-PULL_ONCE = "/tmp/continuous-pull/scripts/pull_once.sh"
+ROUTES = {
+    "/_api/pull": "/tmp/continuous-pull/scripts/pull_once.sh",
+    "/_api/re-setup": "/tmp/continuous-pull/scripts/re_setup.sh",
+}
 PORT = 8051
 
 
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
-        if self.path != "/_api/pull":
+        script = ROUTES.get(self.path)
+        if script is None:
             self.send_error(404)
             return
         try:
             result = subprocess.run(
-                ["bash", PULL_ONCE],
+                ["bash", script],
                 capture_output=True,
                 text=True,
-                timeout=300,
+                timeout=600,
             )
         except subprocess.TimeoutExpired:
-            self.send_error(504, "pull_once timed out")
+            self.send_error(504, f"{self.path} timed out")
             return
 
         body = (
