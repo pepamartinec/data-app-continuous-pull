@@ -41,6 +41,13 @@ v = c['dataApp']['watchedRepo'].get('pullPeriod')
 print('' if v is None else int(v))
 " 2>/dev/null || true)
 
+AUTO_RE_SETUP=$(python3 -c "
+import json
+c = json.load(open('/data/config.json'))
+v = c['dataApp']['watchedRepo'].get('autoReSetup', False)
+print('1' if v else '')
+" 2>/dev/null || true)
+
 echo "Watched repo: $REPO_URL"
 if [ -n "$BRANCH" ]; then
     echo "Branch: $BRANCH"
@@ -76,6 +83,7 @@ cp -a /app/fallback.html /tmp/continuous-pull/fallback.html
 # Persist runtime config for pull_loop.sh
 cat > /tmp/continuous-pull/config.env <<EOF
 PULL_PERIOD=${PULL_PERIOD}
+AUTO_RE_SETUP=${AUTO_RE_SETUP}
 EOF
 
 # Clear /app and clone the watched repo directly into it

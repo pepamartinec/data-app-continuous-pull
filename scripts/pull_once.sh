@@ -13,6 +13,9 @@ fi
 
 FIRST_PULL_FLAG=/tmp/continuous-pull/.first-pull-done
 
+# shellcheck disable=SC1091
+[ -f /tmp/continuous-pull/config.env ] && . /tmp/continuous-pull/config.env
+
 cd /app
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
@@ -49,6 +52,12 @@ if [ ! -f "$FIRST_PULL_FLAG" ]; then
     fi
     touch "$FIRST_PULL_FLAG"
     CHANGED=1
+# On subsequent pulls, re-run setup if autoReSetup is enabled and code changed
+elif [ "$CHANGED" = "1" ] && [ -n "${AUTO_RE_SETUP:-}" ]; then
+    if [ -f /app/keboola-config/setup.sh ]; then
+        echo "Auto re-setup: running watched app setup..."
+        bash /app/keboola-config/setup.sh || echo "Warning: watched app setup failed"
+    fi
 fi
 
 if [ "$CHANGED" = "1" ]; then
