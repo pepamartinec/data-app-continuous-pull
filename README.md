@@ -41,6 +41,7 @@ The app reads its configuration from `/data/config.json`:
       "branch": "main",
       "pullPeriod": 30,
       "#privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\n...",
+      "autoReSetup": true,
       "username": "git",
       "#password": "ghp_xxxxxxxxxxxx"
     }
@@ -53,6 +54,7 @@ The app reads its configuration from `/data/config.json`:
 | `url` | yes | Git clone URL (HTTPS or SSH) |
 | `branch` | no | Branch to clone and track. Defaults to the repo's default branch. |
 | `pullPeriod` | no | Seconds between automatic pulls. When omitted, automatic pulling is disabled and updates must be triggered explicitly via `POST /_api/pull`. |
+| `autoReSetup` | no | When `true`, automatically re-run the watched repo's `setup.sh` after every pull that detects new commits. Useful when dependencies or build steps may change between commits. Defaults to `false`. |
 | `#privateKey` | no | SSH private key for accessing private repositories. The `#` prefix means it is encrypted at rest by Keboola. |
 | `username` | no | Username for HTTPS auth. Used together with `#password`. |
 | `#password` | no | Password or personal access token for HTTPS auth. |
