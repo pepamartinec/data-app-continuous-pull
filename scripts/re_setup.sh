@@ -18,11 +18,34 @@ fi
 echo "Running watched app setup..."
 bash /app/keboola-config/setup.sh
 
-# Refresh saved watched app's supervisord config (in case setup changed it)
-cp /app/keboola-config/supervisord/services/*.conf /tmp/continuous-pull/watched-services/
+# Apply any supervisord config changes the setup may have introduced, then
+# restart all watched programs. `reread && update` handles adds/removes;
+# the explicit stop/start ensures long-running processes pick up new binaries
+# or rebuilt artifacts even when their supervisord entry is unchanged.
+echo "Applying supervisord config changes..."
+supervisorctl -s unix:///tmp/supervisor.sock reread \
+    || echo "Warning: supervisorctl reread failed"
+supervisorctl -s unix:///tmp/supervisor.sock update \
+    || echo "Warning: supervisorctl update failed"
 
-echo "Restarting app..."
-supervisorctl -s unix:///tmp/supervisor.sock restart app \
-    || echo "Warning: supervisorctl restart failed"
+# Restart every watched program (everything except our pull-loop/pull-api).
+# `update` only touches programs whose config changed; re_setup is invoked
+# precisely because build output / dependencies changed, so we want a
+# forced restart of the app processes.
+WATCHED=$(supervisorctl -s unix:///tmp/supervisor.sock status \
+    | awk '{print $1}' \
+    | grep -vxE '(pull-loop|pull-api)' || true)
+if [ -n "$WATCHED" ]; then
+    # shellcheck disable=SC2086
+    supervisorctl -s unix:///tmp/supervisor.sock restart $WATCHED \
+        || echo "Warning: supervisorctl restart failed"
+fi
+
+# Best-effort nginx reload in case the watched setup.sh produced new nginx files
+if nginx -t 2>&1; then
+    nginx -s reload 2>&1 || echo "Warning: nginx reload failed"
+else
+    echo "Warning: nginx -t rejected config, skipping reload"
+fi
 
 echo "=== Re-setup complete ==="
