@@ -48,6 +48,22 @@ fi
 
 # First pull of the container's lifetime runs watched setup automatically
 if [ ! -f "$FIRST_PULL_FLAG" ]; then
+    # Stop watched programs before setup.sh runs. Watched programs start with
+    # autostart=true at container boot and crash-loop against missing build
+    # artifacts (MODULE_NOT_FOUND, uv not yet synced, etc.) until npm install
+    # / uv sync / tsc finishes. Supervisord defaults to startretries=3, so
+    # without this stop they hit FATAL mid-build and our later restart has to
+    # wake them from FATAL (which still works, but leaves ~40s of confusing
+    # "exited: app (exit status 1)" noise in the terminal log). Stopping up
+    # front makes the first-pull logs clean.
+    FIRST_PULL_WATCHED=$(supervisorctl -s unix:///tmp/supervisor.sock status \
+        | awk '{print $1}' \
+        | grep -vxE '(pull-loop|pull-api|nginx|nginx_fatal_exit)' || true)
+    if [ -n "$FIRST_PULL_WATCHED" ]; then
+        # shellcheck disable=SC2086
+        supervisorctl -s unix:///tmp/supervisor.sock stop $FIRST_PULL_WATCHED \
+            || echo "Warning: supervisorctl stop before first-pull setup failed"
+    fi
     if [ -f /app/keboola-config/setup.sh ]; then
         echo "First pull - running watched app setup..."
         bash /app/keboola-config/setup.sh || echo "Warning: watched app setup failed"
@@ -82,7 +98,7 @@ if [ "$CHANGED" = "1" ]; then
     # old single-program `restart app` behavior.
     WATCHED=$(supervisorctl -s unix:///tmp/supervisor.sock status \
         | awk '{print $1}' \
-        | grep -vxE '(pull-loop|pull-api)' || true)
+        | grep -vxE '(pull-loop|pull-api|nginx|nginx_fatal_exit)' || true)
     if [ -n "$WATCHED" ]; then
         # shellcheck disable=SC2086
         supervisorctl -s unix:///tmp/supervisor.sock restart $WATCHED \

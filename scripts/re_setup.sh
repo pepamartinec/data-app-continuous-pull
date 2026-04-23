@@ -34,7 +34,7 @@ supervisorctl -s unix:///tmp/supervisor.sock update \
 # forced restart of the app processes.
 WATCHED=$(supervisorctl -s unix:///tmp/supervisor.sock status \
     | awk '{print $1}' \
-    | grep -vxE '(pull-loop|pull-api)' || true)
+    | grep -vxE '(pull-loop|pull-api|nginx|nginx_fatal_exit)' || true)
 if [ -n "$WATCHED" ]; then
     # shellcheck disable=SC2086
     supervisorctl -s unix:///tmp/supervisor.sock restart $WATCHED \
