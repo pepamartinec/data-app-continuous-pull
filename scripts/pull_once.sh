@@ -46,6 +46,34 @@ if [ "$OLD_HEAD" != "$NEW_HEAD" ]; then
     git clean -fdq
 fi
 
+# Preview-mode overlay: if the repo ships keboola-config/dev/, prefer those
+# scripts over the production setup.sh / supervisord services. Runs after
+# git-reset restores tree state, so the overlay is re-applied every pull.
+# Finalize mode is wrapper-less, so dev/ is simply ignored on production deploys.
+if [ -d /app/keboola-config/dev ]; then
+    # Drop user's production [program:*] files so dev/ entirely owns the set.
+    # Otherwise production app.conf (`node /app/dist/server/index.js`) would race
+    # dev's vite.conf for port 3000. Wrapper-owned _continuous-pull.conf stays
+    # (prefixed with underscore, preserved by the `! -name '_*'` filter).
+    find /app/keboola-config/supervisord/services \
+        -maxdepth 1 -type f -name '*.conf' ! -name '_*' -delete 2>/dev/null || true
+    cp -R /app/keboola-config/dev/. /app/keboola-config/
+fi
+
+# Programs defined in keboola-config/dev/supervisord/services/*.conf are
+# self-watching (Vite HMR, tsx watch). The wrapper MUST NOT restart them on
+# pull -- their internal watchers pick up the code change and HMR fires. Genuine
+# .conf edits still restart via supervisorctl reread && update below, because
+# supervisord's own diff detects those changes.
+DEV_PROGRAMS=""
+if [ -d /app/keboola-config/dev/supervisord/services ]; then
+    DEV_PROGRAMS=$(grep -rhoE '^\[program:[^]]+\]' /app/keboola-config/dev/supervisord/services/ 2>/dev/null \
+        | sed -E 's/^\[program:(.+)\]$/\1/' \
+        | paste -sd'|' -)
+fi
+EXCLUDE_PATTERN='pull-loop|pull-api|nginx|nginx_fatal_exit'
+[ -n "$DEV_PROGRAMS" ] && EXCLUDE_PATTERN="$EXCLUDE_PATTERN|$DEV_PROGRAMS"
+
 # First pull of the container's lifetime runs watched setup automatically
 if [ ! -f "$FIRST_PULL_FLAG" ]; then
     # Stop watched programs before setup.sh runs. Watched programs start with
@@ -58,7 +86,7 @@ if [ ! -f "$FIRST_PULL_FLAG" ]; then
     # front makes the first-pull logs clean.
     FIRST_PULL_WATCHED=$(supervisorctl -s unix:///tmp/supervisor.sock status \
         | awk '{print $1}' \
-        | grep -vxE '(pull-loop|pull-api|nginx|nginx_fatal_exit)' || true)
+        | grep -vxE "($EXCLUDE_PATTERN)" || true)
     if [ -n "$FIRST_PULL_WATCHED" ]; then
         # shellcheck disable=SC2086
         supervisorctl -s unix:///tmp/supervisor.sock stop $FIRST_PULL_WATCHED \
@@ -94,11 +122,11 @@ if [ "$CHANGED" = "1" ]; then
     # pure source-code pushes (e.g. edit app.py, commit, push) supervisord sees
     # no config change and wouldn't restart anything, so we'd serve stale code
     # until the next config edit. Explicitly restart every watched program --
-    # i.e. everything except our own pull-loop and pull-api -- to mirror the
-    # old single-program `restart app` behavior.
+    # i.e. everything except our own pull-loop and pull-api, plus any
+    # self-watching dev-overlay programs which handle code pickup via HMR.
     WATCHED=$(supervisorctl -s unix:///tmp/supervisor.sock status \
         | awk '{print $1}' \
-        | grep -vxE '(pull-loop|pull-api|nginx|nginx_fatal_exit)' || true)
+        | grep -vxE "($EXCLUDE_PATTERN)" || true)
     if [ -n "$WATCHED" ]; then
         # shellcheck disable=SC2086
         supervisorctl -s unix:///tmp/supervisor.sock restart $WATCHED \
