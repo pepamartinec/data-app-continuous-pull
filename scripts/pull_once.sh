@@ -36,8 +36,10 @@ if [ "$OLD_HEAD" != "$NEW_HEAD" ]; then
     git diff --name-only "$OLD_HEAD" "$NEW_HEAD"
 
     # Did any nginx config change? (decide before we reset so we can compare paths)
+    # Includes the dev-overlay nginx tree because overlay copies dev/nginx into
+    # the live keboola-config/nginx path on every pull.
     if git diff --name-only "$OLD_HEAD" "$NEW_HEAD" \
-        | grep -qE '^keboola-config/nginx/'; then
+        | grep -qE '^keboola-config/(dev/)?nginx/'; then
         NGINX_CHANGED=1
     fi
 
@@ -58,6 +60,15 @@ if [ -d /app/keboola-config/dev ]; then
     find /app/keboola-config/supervisord/services \
         -maxdepth 1 -type f -name '*.conf' ! -name '_*' -delete 2>/dev/null || true
     cp -R /app/keboola-config/dev/. /app/keboola-config/
+
+    # First-pull only: nginx was started by supervisord BEFORE this overlay
+    # ran, so any dev/nginx/conf.d/*.conf snippets shipped by the user aren't
+    # loaded yet. Force a reload on the first pull so they take effect. On
+    # subsequent pulls the git-diff check above catches changes.
+    if [ ! -f "$FIRST_PULL_FLAG" ] && [ -d /app/keboola-config/dev/nginx ]; then
+        NGINX_CHANGED=1
+        CHANGED=1   # ensure the restart block (which reloads nginx) actually runs
+    fi
 fi
 
 # Programs defined in keboola-config/dev/supervisord/services/*.conf are
