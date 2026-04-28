@@ -97,15 +97,22 @@ else
     git clone "$REPO_URL" /app
 fi
 
-# Save watched app's supervisord config for command discovery
-mkdir -p /tmp/continuous-pull/watched-services
-cp /app/keboola-config/supervisord/services/*.conf /tmp/continuous-pull/watched-services/
-
 # Watched app's setup.sh is run by the first pull_once, not here.
 
-# Restore our keboola-config (platform reads these AFTER setup.sh finishes)
-echo "Restoring continuous-pull configs..."
-cp -af /tmp/continuous-pull/keboola-config/nginx/* /app/keboola-config/nginx/
-cp -af /tmp/continuous-pull/keboola-config/supervisord/* /app/keboola-config/supervisord/
+# Install our keboola-config alongside the watched repo's. The platform reads
+# /app/keboola-config/ after this script returns, so after this merge step:
+#   - nginx/sites/default.conf   -> wrapper's (owns server block + /_api/)
+#   - nginx/conf.d/*.conf        -> user's (included by our server block)
+#   - supervisord/services/
+#       _continuous-pull.conf    -> wrapper's (pull-loop + pull-api)
+#       app.conf + any others    -> user's (all [program:*] sections load)
+echo "Installing continuous-pull configs..."
+mkdir -p /app/keboola-config/nginx/sites /app/keboola-config/nginx/conf.d
+mkdir -p /app/keboola-config/supervisord/services
+cp -af /tmp/continuous-pull/keboola-config/nginx/sites/* /app/keboola-config/nginx/sites/
+cp -af /tmp/continuous-pull/keboola-config/supervisord/rpc.conf \
+    /app/keboola-config/supervisord/
+cp -af /tmp/continuous-pull/keboola-config/supervisord/services/_continuous-pull.conf \
+    /app/keboola-config/supervisord/services/
 
 echo "=== Setup complete ==="
